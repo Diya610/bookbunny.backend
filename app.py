@@ -1,28 +1,42 @@
 from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
-import random
-import hashlib
 
 app = Flask(__name__)
 
-# ✅ Allow ONLY your Vercel frontend URL(s)
+# ✅ CORS for Vercel frontend
 CORS(app, origins=[
     "https://bookbunny-frontend.vercel.app",
     "https://bookbunny-frontend-diya610.vercel.app"
-])
+], supports_credentials=True)
 
-users = []
-books = [
-    {"id": 1, "title": "The Alchemist", "author": "Paulo Coelho"},
-    {"id": 2, "title": "To Kill a Mockingbird", "author": "Harper Lee"},
-    {"id": 3, "title": "Pride and Prejudice", "author": "Jane Austen"},
-]
+# ✅ SQLite Database Connection
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///bookbunny.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+
+# ✅ Database Models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+
+
+@app.before_first_request
+def create_tables():
+    db.create_all()
+
 
 @app.route("/")
 def home():
-    return jsonify({"message": "BookBunny API running!"})
+    return jsonify({"message": "BookBunny API running with DB ✅"})
 
+
+# ✅ Secure Signup
 @app.route("/signup", methods=["POST"])
 def signup():
     data = request.json
@@ -33,34 +47,31 @@ def signup():
     if not username or not email or not password:
         return jsonify({"error": "All fields required"}), 400
 
-    for u in users:
-        if u["email"] == email:
-            return jsonify({"error": "Email already registered 🥹"}), 400
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already used 😭"}), 400
 
-    hashed_pw = hashlib.sha256(password.encode()).hexdigest()
-    user = {"username": username, "email": email, "password": hashed_pw}
-    users.append(user)
+    hashed_pw = generate_password_hash(password)
+    new_user = User(username=username, email=email, password_hash=hashed_pw)
+
+    db.session.add(new_user)
+    db.session.commit()
+
     return jsonify({"message": "Signup successful 🎉"}), 201
 
+
+# ✅ Secure Login
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
     email = data.get("email")
     password = data.get("password")
-    hashed_pw = hashlib.sha256(password.encode()).hexdigest()
 
-    for u in users:
-        if u["email"] == email and u["password"] == hashed_pw:
-            return jsonify({"message": "Login successful 🎉", "user": u["username"]})
+    user = User.query.filter_by(email=email).first()
+    if user and check_password_hash(user.password_hash, password):
+        return jsonify({"message": "Login successful 🎉", "user": user.username})
+
     return jsonify({"error": "Invalid credentials 😭"}), 401
 
-@app.route("/books")
-def get_books():
-    return jsonify(books)
-
-@app.route("/recommend")
-def recommend():
-    return jsonify(random.choice(books))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
