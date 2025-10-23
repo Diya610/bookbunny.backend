@@ -6,37 +6,32 @@ import os
 
 app = Flask(__name__)
 
-# ✅ CORS for Vercel frontend
 CORS(app, origins=[
     "https://bookbunny-frontend.vercel.app",
     "https://bookbunny-frontend-diya610.vercel.app"
 ], supports_credentials=True)
 
-# ✅ SQLite Database Connection
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///bookbunny.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# ✅ Database Models
+# ✅ Create DB tables when app starts
+with app.app_context():
+    db.create_all()
+
+# ✅ USER MODEL
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
 
-
-@app.before_first_request
-def create_tables():
-    db.create_all()
-
-
 @app.route("/")
 def home():
-    return jsonify({"message": "BookBunny API running with DB ✅"})
+    return jsonify({"message": "BookBunny API running with database ✅"})
 
-
-# ✅ Secure Signup
+# ✅ SIGNUP
 @app.route("/signup", methods=["POST"])
 def signup():
     data = request.json
@@ -48,7 +43,7 @@ def signup():
         return jsonify({"error": "All fields required"}), 400
 
     if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already used 😭"}), 400
+        return jsonify({"error": "Email already exists 😭"}), 400
 
     hashed_pw = generate_password_hash(password)
     new_user = User(username=username, email=email, password_hash=hashed_pw)
@@ -58,8 +53,7 @@ def signup():
 
     return jsonify({"message": "Signup successful 🎉"}), 201
 
-
-# ✅ Secure Login
+# ✅ LOGIN
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
@@ -67,11 +61,11 @@ def login():
     password = data.get("password")
 
     user = User.query.filter_by(email=email).first()
+
     if user and check_password_hash(user.password_hash, password):
         return jsonify({"message": "Login successful 🎉", "user": user.username})
 
     return jsonify({"error": "Invalid credentials 😭"}), 401
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
