@@ -69,4 +69,13 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
 
+# ✅ Get all books (Recommended section)
+@app.route("/books", methods=["GET"])
+def get_books():
+    return jsonify([
+        {"id": 1, "title": "The Alchemist", "author": "Paulo Coelho", "genre": "Fiction"},
+        {"id": 2, "title": "To Kill a Mockingbird", "author": "Harper Lee", "genre": "Classic"},
+        {"id": 3, "title": "Pride and Prejudice", "author": "Jane Austen", "genre": "Romance"},
+    ])
+
 
