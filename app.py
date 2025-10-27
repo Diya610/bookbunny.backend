@@ -6,10 +6,12 @@ import os
 
 app = Flask(__name__)
 
-CORS(app, origins=[
-    "https://bookbunny-frontend.vercel.app",
-    "https://bookbunny-frontend-diya610.vercel.app"
-], supports_credentials=True)
+CORS(app, resources={r"/*": {
+    "origins": "*",
+    "allow_headers": "*",
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+}})
+
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///bookbunny.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -64,3 +66,4 @@ def login():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
