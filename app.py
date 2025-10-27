@@ -8,9 +8,11 @@ app = Flask(__name__)
 
 CORS(app, resources={r"/*": {
     "origins": "*",
-    "allow_headers": "*",
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type"],
+    "supports_credentials": True
 }})
+
 
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///bookbunny.db"
@@ -66,4 +68,5 @@ def login():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
